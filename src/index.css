@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --font-inter: "Inter", sans-serif;
+  --color-anaboli-primary: #111111;
+  --color-anaboli-secondary: #1f1f1f;
+  --color-anaboli-accent: #2a2a2a;
+  --color-anaboli-base: #ffffff;
+  --color-anaboli-text-primary: #ffffff;
+  --color-anaboli-text-secondary: #bfbfbf;
+  --color-text-accent: #8b5cf6;
+  --color-text-base: #111111;
+}
