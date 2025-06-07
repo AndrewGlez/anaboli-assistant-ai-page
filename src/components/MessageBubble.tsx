@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Copy, RotateCcw, User, Check } from "lucide-react";
 import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
+import { Avatar } from "./Avatar";
 
 interface MessageBubbleProps {
   message: Message;
@@ -40,11 +41,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {isUser ? (
           <User className="w-5 h-5 text-anaboli-text-primary" />
         ) : (
-          <img
-            src="https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400"
-            alt="Asistente"
-            className="w-full h-full object-cover rounded-full"
-          />
+          <Avatar />
         )}
       </div>
       {/* Message Content */}
