@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Copy, RotateCcw, User, Check } from "lucide-react";
 import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
@@ -13,6 +13,15 @@ interface MessageBubbleProps {
 export function MessageBubble({ message }: MessageBubbleProps) {
   const { actions } = useChat();
   const [copied, setCopied] = useState(false);
+  const [parsedContent, setParsedContent] = useState<string>("");
+
+  useEffect(() => {
+    const parseContent = async () => {
+      const parsed = await marked.parseInline(message.content);
+      setParsedContent(DOMPurify.sanitize(parsed));
+    };
+    parseContent();
+  }, [message.content]);
 
   const copyToClipboard = async () => {
     try {
@@ -87,9 +96,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               <div className="prose prose-sm max-w-none">
                 <p
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(
-                      marked.parseInline(message.content)
-                    ),
+                    __html: parsedContent,
                   }}
                   className="text-anaboli-text-primary whitespace-pre-wrap leading-relaxed m-0"
                 ></p>
