@@ -1,9 +1,23 @@
+export interface MessageAction {
+  action: "postback";
+  label: string;
+  value: string;
+}
+
+export interface MessageCard {
+  type: "card";
+  title: string;
+  subtitle?: string;
+  actions: MessageAction[];
+}
+
 export interface Message {
   id: string;
   content: string;
   role: "user" | "assistant";
   timestamp: Date;
   isTyping?: boolean;
+  card?: MessageCard;
 }
 
 export interface Conversation {

@@ -86,6 +86,30 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                   {message.content}
                 </p>
               </div>
+              {/* Card with buttons */}
+              {message.card && (
+                <div className="mt-3 p-3 bg-anaboli-accent rounded-lg border border-anaboli-primary">
+                  <h4 className="text-sm font-semibold text-anaboli-text-primary mb-1">
+                    {message.card.title}
+                  </h4>
+                  {message.card.subtitle && (
+                    <p className="text-xs text-anaboli-text-secondary mb-3">
+                      {message.card.subtitle}
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {message.card.actions.map((action, index) => (
+                      <button
+                        key={index}
+                        onClick={() => actions.handleButtonClick(action.value)}
+                        className="px-3 py-2 text-sm bg-anaboli-primary text-white rounded-md hover:bg-opacity-90 transition-colors text-left"
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Message Actions */}{" "}
               <div
                 className={`absolute -top-2 ${

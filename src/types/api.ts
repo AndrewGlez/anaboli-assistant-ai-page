@@ -3,6 +3,12 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 
 //const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 
+export interface MessageAction {
+  action: "postback";
+  label: string;
+  value: string;
+}
+
 export interface MessageData {
   type?: string;
   data?: {
@@ -13,6 +19,9 @@ export interface MessageData {
     payload?: {
       text?: string;
       type?: string;
+      title?: string;
+      subtitle?: string;
+      actions?: MessageAction[];
     };
     isBot?: boolean;
   };
@@ -20,6 +29,9 @@ export interface MessageData {
   payload?: {
     text?: string;
     type?: string;
+    title?: string;
+    subtitle?: string;
+    actions?: MessageAction[];
   };
   conversationId?: string;
   id?: string;
@@ -100,6 +112,20 @@ export async function sendMessage(
   }
 }
 
+export async function fallbackGetLastMessage(conversationId: string, x_user_key: string) {
+  try {
+    const response = await api.get(`/conversations/${conversationId}/messages`, {
+      headers: {
+        "x-user-key": x_user_key,
+      },
+    });
+    return response.data[0];
+  } catch (error) {
+    console.error("Error fetching last message:", error);
+    throw error;
+  }
+}
+
 export function listenToMessages(
   x_user_key: string,
   conversationId: string,
@@ -122,7 +148,7 @@ export function listenToMessages(
           },
           signal: controller.signal,
           onmessage: (event) => {
-            //console.log("Received SSE message:", event.data);
+            console.log("Received SSE message:", event.data);
             // Ignore ping messages
             if (event.data === "ping" || event.data.trim() === "ping") return;
             try {

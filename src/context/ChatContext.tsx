@@ -16,6 +16,9 @@ interface ChatState {
   conversationId: string | null;
   userKey: string | null;
   messageListener: (() => void) | null;
+  messageCount: number;
+  messageLimit: number;
+  isLimitReached: boolean;
 }
 
 type ChatAction =
@@ -29,6 +32,8 @@ type ChatAction =
   | { type: "SET_USER_DATA"; payload: { userId: string; userKey: string } }
   | { type: "SET_CONVERSATION_ID"; payload: string }
   | { type: "SET_MESSAGE_LISTENER"; payload: (() => void) | null }
+  | { type: "INCREMENT_MESSAGE_COUNT" }
+  | { type: "RESET_MESSAGE_COUNT" }
   | { type: "RESET_CHAT" };
 
 const initialState: ChatState = {
@@ -38,6 +43,9 @@ const initialState: ChatState = {
   conversationId: null,
   userKey: null,
   messageListener: null,
+  messageCount: 0,
+  messageLimit: 10,
+  isLimitReached: false,
 };
 
 function chatReducer(state: ChatState, action: ChatAction): ChatState {
@@ -85,6 +93,21 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ...state,
         messageListener: action.payload,
       };
+    case "INCREMENT_MESSAGE_COUNT": {
+      const newCount = state.messageCount + 1;
+      return {
+        ...state,
+        messageCount: newCount,
+        isLimitReached: newCount >= state.messageLimit,
+      };
+    }
+
+    case "RESET_MESSAGE_COUNT":
+      return {
+        ...state,
+        messageCount: 0,
+        isLimitReached: false,
+      };
 
     case "RESET_CHAT":
       return {
@@ -105,26 +128,38 @@ interface ChatContextType {
     regenerateMessage: (messageId: string) => Promise<void>;
     clearChat: () => void;
     removeMessage: (messageId: string) => void;
+    handleButtonClick: (buttonValue: string) => Promise<void>;
   };
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, initialState);
-
-  // Cleanup message listener on unmount and when listener changes
+  const [state, dispatch] = useReducer(chatReducer, initialState); // Cleanup message listener on unmount and when listener changes
   useEffect(() => {
+    const cleanup = state.messageListener;
     return () => {
-      if (state.messageListener) {
-        state.messageListener();
+      if (cleanup) {
+        cleanup();
       }
     };
   }, [state.messageListener]);
 
-
   const actions = {
     sendMessage: async (content: string) => {
+      // Check if message limit is reached
+      if (state.isLimitReached) {
+        const limitMessage: Message = {
+          id: Date.now().toString(),
+          content:
+            "Has alcanzado el límite de 10 mensajes. Por favor, reinicia la conversación para continuar.",
+          role: "assistant",
+          timestamp: new Date(),
+        };
+        dispatch({ type: "ADD_MESSAGE", payload: limitMessage });
+        return;
+      }
+
       try {
         // Create user message
         const userMessage: Message = {
@@ -134,6 +169,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           timestamp: new Date(),
         };
         dispatch({ type: "ADD_MESSAGE", payload: userMessage });
+        dispatch({ type: "INCREMENT_MESSAGE_COUNT" });
         dispatch({ type: "SET_TYPING", payload: true });
 
         let currentUserId = state.userId;
@@ -172,9 +208,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           dispatch({
             type: "SET_CONVERSATION_ID",
             payload: currentConversationId,
-          });
-
-          // Start listening for messages
+          }); // Start listening for messages
           const cleanup = listenToMessages(
             currentUserKey,
             currentConversationId,
@@ -185,15 +219,27 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const messageId =
                 messageData.data?.id || messageData.id || Date.now().toString();
               const isBot = messageData.data?.isBot;
+              const payload = messageData.data?.payload || messageData.payload;
 
-              // Only show message if it's from the bot and has content
-              if (messageContent && isBot === true) {
+              // Only show message if it's from the bot
+              if (isBot === true) {
                 const aiMessage: Message = {
                   id: messageId,
-                  content: messageContent,
+                  content: messageContent || "",
                   role: "assistant",
                   timestamp: new Date(),
                 };
+
+                // Add card data if it exists
+                if (payload?.type === "card") {
+                  aiMessage.card = {
+                    type: "card",
+                    title: payload.title || "",
+                    subtitle: payload.subtitle,
+                    actions: payload.actions || [],
+                  };
+                }
+
                 dispatch({ type: "ADD_MESSAGE", payload: aiMessage });
                 dispatch({ type: "SET_TYPING", payload: false });
               }
@@ -303,17 +349,53 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         });
       }
     },
-
     clearChat: () => {
       // Clean up message listener before resetting
       if (state.messageListener) {
         state.messageListener();
       }
       dispatch({ type: "RESET_CHAT" });
+      dispatch({ type: "RESET_MESSAGE_COUNT" });
     },
-
     removeMessage: (messageId: string) => {
       dispatch({ type: "REMOVE_MESSAGE", payload: messageId });
+    },
+
+    handleButtonClick: async (buttonValue: string) => {
+      // Handle button clicks by sending the button value as a message
+      // Create user message for the button click
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        content: buttonValue,
+        role: "user",
+        timestamp: new Date(),
+      };
+      dispatch({ type: "ADD_MESSAGE", payload: userMessage });
+      dispatch({ type: "INCREMENT_MESSAGE_COUNT" });
+
+      // Send the button value through the existing sendMessage logic
+      if (state.userKey && state.conversationId) {
+        try {
+          dispatch({ type: "SET_TYPING", payload: true });
+          await sendApiMessage(
+            state.userKey,
+            state.conversationId,
+            buttonValue
+          );
+        } catch (error) {
+          console.error("Error handling button click:", error);
+          dispatch({ type: "SET_TYPING", payload: false });
+
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content:
+              "Error al procesar la selección. Por favor, inténtalo de nuevo.",
+            role: "assistant",
+            timestamp: new Date(),
+          };
+          dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+        }
+      }
     },
   };
 
