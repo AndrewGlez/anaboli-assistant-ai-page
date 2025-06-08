@@ -3,7 +3,7 @@ import { Copy, RotateCcw, User, Check } from "lucide-react";
 import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
 import { Avatar } from "./Avatar";
-import ReactHtmlParser from "react-html-parser";
+import DOMPurify from "dompurify";
 
 interface MessageBubbleProps {
   message: Message;
@@ -84,9 +84,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <>
               {" "}
               <div className="prose prose-sm max-w-none">
-                <p className="whitespace-pre-wrap leading-relaxed m-0">
-                  {ReactHtmlParser(message.content)}
-                </p>
+                <p
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(message.content),
+                  }}
+                  className="whitespace-pre-wrap leading-relaxed m-0"
+                ></p>
               </div>
               {/* Choice with options */}
               {message.choice && (
