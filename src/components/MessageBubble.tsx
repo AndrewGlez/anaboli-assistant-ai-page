@@ -4,6 +4,7 @@ import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
 import { Avatar } from "./Avatar";
 import DOMPurify from "dompurify";
+import { marked } from "marked";
 
 interface MessageBubbleProps {
   message: Message;
@@ -35,7 +36,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       {/* Avatar */}
       <div
         className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-          isUser ? "bg-text-accent" : "bg-anaboli-accent"
+          isUser ? "bg-text-accent mt-5" : "bg-anaboli-accent"
         }`}
       >
         {" "}
@@ -86,9 +87,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               <div className="prose prose-sm max-w-none">
                 <p
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(message.content),
+                    __html: DOMPurify.sanitize(
+                      marked.parseInline(message.content)
+                    ),
                   }}
-                  className="whitespace-pre-wrap leading-relaxed m-0"
+                  className="text-anaboli-text-primary whitespace-pre-wrap leading-relaxed m-0"
                 ></p>
               </div>
               {/* Choice with options */}
