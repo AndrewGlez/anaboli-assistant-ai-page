@@ -9,6 +9,11 @@ export interface MessageAction {
   value: string;
 }
 
+export interface MessageOption {
+  label: string;
+  value: string;
+}
+
 export interface MessageData {
   type?: string;
   data?: {
@@ -22,6 +27,7 @@ export interface MessageData {
       title?: string;
       subtitle?: string;
       actions?: MessageAction[];
+      options?: MessageOption[];
     };
     isBot?: boolean;
   };
@@ -32,6 +38,7 @@ export interface MessageData {
     title?: string;
     subtitle?: string;
     actions?: MessageAction[];
+    options?: MessageOption[];
   };
   conversationId?: string;
   id?: string;
@@ -46,7 +53,7 @@ export const api = axios.create({
 });
 
 export function generateUserId() {
-  return "user_" + Math.random().toString(36).substr(2, 9);
+  return "anaboli_user_" + Math.random().toString(36).substr(2, 9);
 }
 
 export async function createUser(id: string, name: string) {
@@ -112,14 +119,33 @@ export async function sendMessage(
   }
 }
 
-export async function fallbackGetLastMessage(conversationId: string, x_user_key: string) {
+export async function getLastMessage(
+  conversationId: string,
+  x_user_key: string
+) {
   try {
-    const response = await api.get(`/conversations/${conversationId}/messages`, {
-      headers: {
-        "x-user-key": x_user_key,
-      },
-    });
-    return response.data[0];
+    while (true) {
+      const response = await api.get(
+        `/conversations/${conversationId}/messages`,
+        {
+          headers: {
+            "x-user-key": x_user_key,
+          },
+        }
+      );
+
+      if (response.data.messages[0].userId.includes("anaboli_user_")) {
+        console.warn(
+          "Last message is from a user, not a bot. Waiting 2 seconds..."
+        );
+        await new Promise((resolve) => setTimeout(resolve, 20000)); // Wait 2 seconds
+        continue; // Loop again
+      }
+
+      const message = response.data.messages[0] as MessageData;
+      // console.log("Last message fetched:", message);
+      return message;
+    }
   } catch (error) {
     console.error("Error fetching last message:", error);
     throw error;
@@ -148,7 +174,7 @@ export function listenToMessages(
           },
           signal: controller.signal,
           onmessage: (event) => {
-            console.log("Received SSE message:", event.data);
+            // console.log("Received SSE message:", event.data);
             // Ignore ping messages
             if (event.data === "ping" || event.data.trim() === "ping") return;
             try {

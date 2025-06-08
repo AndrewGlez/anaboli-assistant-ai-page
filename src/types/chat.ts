@@ -1,3 +1,14 @@
+export interface MessageOption {
+  label: string;
+  value: string;
+}
+
+export interface MessageChoice {
+  type: "choice";
+  text: string;
+  options: MessageOption[];
+}
+
 export interface MessageAction {
   action: "postback";
   label: string;
@@ -18,6 +29,7 @@ export interface Message {
   timestamp: Date;
   isTyping?: boolean;
   card?: MessageCard;
+  choice?: MessageChoice;
 }
 
 export interface Conversation {

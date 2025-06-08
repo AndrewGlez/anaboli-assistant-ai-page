@@ -3,6 +3,7 @@ import { Copy, RotateCcw, User, Check } from "lucide-react";
 import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
 import { Avatar } from "./Avatar";
+import ReactHtmlParser from "react-html-parser";
 
 interface MessageBubbleProps {
   message: Message;
@@ -81,11 +82,28 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             </div>
           ) : (
             <>
+              {" "}
               <div className="prose prose-sm max-w-none">
                 <p className="whitespace-pre-wrap leading-relaxed m-0">
-                  {message.content}
+                  {ReactHtmlParser(message.content)}
                 </p>
               </div>
+              {/* Choice with options */}
+              {message.choice && (
+                <div className="mt-3 p-3 bg-anaboli-accent rounded-lg border border-anaboli-primary">
+                  <div className="flex flex-col gap-2">
+                    {message.choice.options.map((option, index) => (
+                      <button
+                        key={index}
+                        onClick={() => actions.handleButtonClick(option.value)}
+                        className="px-3 py-2 text-sm bg-anaboli-primary text-white rounded-md hover:bg-neutral-800 transition-colors text-left"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Card with buttons */}
               {message.card && (
                 <div className="mt-3 p-3 bg-anaboli-accent rounded-lg border border-anaboli-primary">
@@ -101,7 +119,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     {message.card.actions.map((action, index) => (
                       <button
                         key={index}
-                        onClick={() => actions.handleButtonClick(action.value)}
+                        onClick={() => actions.handleButtonClick(action.label)}
                         className="px-3 py-2 text-sm bg-anaboli-primary text-white rounded-md hover:bg-opacity-90 transition-colors text-left"
                       >
                         {action.label}
