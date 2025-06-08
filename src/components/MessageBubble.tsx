@@ -41,7 +41,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         {isUser ? (
           <User className="w-5 h-5 text-anaboli-text-primary" />
         ) : (
-          <Avatar />
+          <Avatar rounded />
         )}
       </div>
       {/* Message Content */}

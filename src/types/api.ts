@@ -123,6 +123,8 @@ export function listenToMessages(
           signal: controller.signal,
           onmessage: (event) => {
             console.log("Received SSE message:", event.data);
+            // Ignore ping messages
+            if (event.data === "ping" || event.data.trim() === "ping") return;
             try {
               const parsedData = JSON.parse(event.data);
               onMessage(parsedData);
@@ -134,7 +136,7 @@ export function listenToMessages(
           onerror: (error) => {
             console.error("SSE connection error:", error);
             onError?.(error);
-            throw error; // This will cause fetchEventSource to retry
+            throw error;
           },
           onopen: async (response) => {
             if (!response.ok) {

@@ -24,10 +24,12 @@ type ChatAction =
       type: "UPDATE_MESSAGE";
       payload: { messageId: string; updates: Partial<Message> };
     }
+  | { type: "REMOVE_MESSAGE"; payload: string }
   | { type: "SET_TYPING"; payload: boolean }
   | { type: "SET_USER_DATA"; payload: { userId: string; userKey: string } }
   | { type: "SET_CONVERSATION_ID"; payload: string }
-  | { type: "SET_MESSAGE_LISTENER"; payload: (() => void) | null };
+  | { type: "SET_MESSAGE_LISTENER"; payload: (() => void) | null }
+  | { type: "RESET_CHAT" };
 
 const initialState: ChatState = {
   messages: [],
@@ -56,6 +58,12 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         ),
       };
 
+    case "REMOVE_MESSAGE":
+      return {
+        ...state,
+        messages: state.messages.filter((msg) => msg.id !== action.payload),
+      };
+
     case "SET_TYPING":
       return { ...state, isTyping: action.payload };
 
@@ -65,6 +73,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         userId: action.payload.userId,
         userKey: action.payload.userKey,
       };
+
     case "SET_CONVERSATION_ID":
       return {
         ...state,
@@ -77,6 +86,13 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         messageListener: action.payload,
       };
 
+    case "RESET_CHAT":
+      return {
+        ...initialState,
+        userId: state.userId,
+        userKey: state.userKey,
+      };
+
     default:
       return state;
   }
@@ -85,24 +101,58 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 interface ChatContextType {
   state: ChatState;
   actions: {
-    sendMessage: (content: string) => void;
-    regenerateMessage: (messageId: string) => void;
+    sendMessage: (content: string) => Promise<void>;
+    regenerateMessage: (messageId: string) => Promise<void>;
+    clearChat: () => void;
+    removeMessage: (messageId: string) => void;
   };
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, initialState); // Cleanup message listener on unmount
+  const [state, dispatch] = useReducer(chatReducer, initialState);
+
+  // Cleanup message listener on unmount and when listener changes
   useEffect(() => {
     return () => {
       if (state.messageListener) {
         state.messageListener();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [state.messageListener]);
 
+  // Auto-save user data to localStorage
+  useEffect(() => {
+    if (state.userId && state.userKey) {
+      localStorage.setItem(
+        "chatUserData",
+        JSON.stringify({
+          userId: state.userId,
+          userKey: state.userKey,
+        })
+      );
+    }
+  }, [state.userId, state.userKey]);
+
+  // Load user data from localStorage on mount
+  useEffect(() => {
+    const savedUserData = localStorage.getItem("chatUserData");
+    if (savedUserData) {
+      try {
+        const { userId, userKey } = JSON.parse(savedUserData);
+        if (userId && userKey) {
+          dispatch({
+            type: "SET_USER_DATA",
+            payload: { userId, userKey },
+          });
+        }
+      } catch (error) {
+        console.error("Error loading saved user data:", error);
+        localStorage.removeItem("chatUserData");
+      }
+    }
+  }, []);
   const actions = {
     sendMessage: async (content: string) => {
       try {
@@ -115,11 +165,10 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         };
         dispatch({ type: "ADD_MESSAGE", payload: userMessage });
         dispatch({ type: "SET_TYPING", payload: true });
+
         let currentUserId = state.userId;
         let currentConversationId = state.conversationId;
-        let currentUserKey = state.userKey;
-
-        // Initialize user and conversation if not already done
+        let currentUserKey = state.userKey; // Initialize user and conversation if not already done
         if (!currentUserId || !currentConversationId || !currentUserKey) {
           // Generate user ID
           currentUserId = generateUserId();
@@ -130,36 +179,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
             "Usuario Anaboli"
           );
           currentUserKey = userResponse.key || userResponse.id || currentUserId;
-          console.log("User created:", currentUserId, "Key:", currentUserKey); // Set user data
+
+          // Validate user key exists
+          if (!currentUserKey) {
+            throw new Error("No se pudo obtener la clave de usuario");
+          }
+
+          // Set user data
           dispatch({
             type: "SET_USER_DATA",
-            payload: { userId: currentUserId!, userKey: currentUserKey! },
+            payload: { userId: currentUserId, userKey: currentUserKey },
           });
 
           // Generate conversation ID
           currentConversationId =
-            "conv_" + Math.random().toString(36).substr(2, 9); // Create conversation
-          await createConversation(currentUserKey!, currentConversationId!);
-          console.log("Conversation created:", currentConversationId);
+            "conv_" + Math.random().toString(36).substr(2, 9);
+
+          // Create conversation
+          await createConversation(currentUserKey, currentConversationId);
 
           // Set conversation ID
           dispatch({
             type: "SET_CONVERSATION_ID",
             payload: currentConversationId,
-          }); // Start listening for messages
+          });
+
+          // Start listening for messages
           const cleanup = listenToMessages(
-            currentUserKey!,
-            currentConversationId!,
+            currentUserKey,
+            currentConversationId,
             (messageData: MessageData) => {
               // Handle incoming message from the bot
-              // Check for new structure first, then fall back to legacy structure
               const messageContent =
                 messageData.data?.payload?.text || messageData.payload?.text;
               const messageId =
                 messageData.data?.id || messageData.id || Date.now().toString();
               const isBot = messageData.data?.isBot;
 
-              // Only show message if it's from the bot
+              // Only show message if it's from the bot and has content
               if (messageContent && isBot === true) {
                 const aiMessage: Message = {
                   id: messageId,
@@ -172,16 +229,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               }
             },
             (error: Error) => {
+              console.error("Error in message listener:", error);
               dispatch({ type: "SET_TYPING", payload: false });
-              // Add error message
-              // const errorMessage: Message = {
-              //   id: Date.now().toString(),
-              //   content:
-              //     "Error al recibir la respuesta. Por favor, inténtalo de nuevo.",
-              //   role: "assistant",
-              //   timestamp: new Date(),
-              // };
-              // dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
+
+              const errorMessage: Message = {
+                id: Date.now().toString(),
+                content:
+                  "Error al recibir la respuesta. Por favor, inténtalo de nuevo.",
+                role: "assistant",
+                timestamp: new Date(),
+              };
+              dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
             }
           );
 
@@ -189,13 +247,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: "SET_MESSAGE_LISTENER", payload: cleanup });
         }
 
-        // Send message to API
-        const response = await sendApiMessage(
-          currentUserKey!,
-          currentConversationId!,
-          content
-        );
-        console.log("Message sent:", response);
+        // Ensure we have valid values before sending message
+        if (currentUserKey && currentConversationId) {
+          // Send the actual message through the API
+          await sendApiMessage(currentUserKey, currentConversationId, content);
+        } else {
+          throw new Error(
+            "Usuario o conversación no inicializados correctamente"
+          );
+        }
       } catch (error) {
         console.error("Error in sendMessage:", error);
         dispatch({ type: "SET_TYPING", payload: false });
@@ -211,24 +271,79 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: "ADD_MESSAGE", payload: errorMessage });
       }
     },
-
     regenerateMessage: async (messageId: string) => {
       const message = state.messages.find((m) => m.id === messageId);
       if (!message || message.role !== "assistant") return;
 
-      dispatch({ type: "SET_TYPING", payload: true });
+      // Find the previous user message to regenerate the response
+      const messageIndex = state.messages.findIndex((m) => m.id === messageId);
+      const userMessageIndex = messageIndex - 1;
 
-      setTimeout(() => {
-        const newContent = `Respuesta regenerada: ${message.content}`;
+      if (
+        userMessageIndex < 0 ||
+        state.messages[userMessageIndex].role !== "user"
+      ) {
+        console.error("No user message found before assistant message");
+        return;
+      }
+
+      const userMessage = state.messages[userMessageIndex];
+
+      if (!state.userKey || !state.conversationId) {
+        console.error("User key or conversation ID not available");
+        return;
+      }
+
+      try {
+        dispatch({ type: "SET_TYPING", payload: true });
+
+        // Remove the old assistant message
         dispatch({
           type: "UPDATE_MESSAGE",
           payload: {
             messageId,
-            updates: { content: newContent, timestamp: new Date() },
+            updates: {
+              content: "Regenerando respuesta...",
+              timestamp: new Date(),
+            },
           },
         });
+
+        // Send the user message again to regenerate the response
+        await sendApiMessage(
+          state.userKey,
+          state.conversationId,
+          userMessage.content
+        );
+      } catch (error) {
+        console.error("Error regenerating message:", error);
         dispatch({ type: "SET_TYPING", payload: false });
-      }, 1000);
+
+        // Restore original message or show error
+        dispatch({
+          type: "UPDATE_MESSAGE",
+          payload: {
+            messageId,
+            updates: {
+              content:
+                "Error al regenerar la respuesta. Por favor, inténtalo de nuevo.",
+              timestamp: new Date(),
+            },
+          },
+        });
+      }
+    },
+
+    clearChat: () => {
+      // Clean up message listener before resetting
+      if (state.messageListener) {
+        state.messageListener();
+      }
+      dispatch({ type: "RESET_CHAT" });
+    },
+
+    removeMessage: (messageId: string) => {
+      dispatch({ type: "REMOVE_MESSAGE", payload: messageId });
     },
   };
 
