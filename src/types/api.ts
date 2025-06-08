@@ -1,7 +1,7 @@
 import axios from "axios";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 
-const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
+//const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 
 export interface MessageData {
   type?: string;
