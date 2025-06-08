@@ -122,7 +122,7 @@ export function listenToMessages(
           },
           signal: controller.signal,
           onmessage: (event) => {
-            console.log("Received SSE message:", event.data);
+            //console.log("Received SSE message:", event.data);
             // Ignore ping messages
             if (event.data === "ping" || event.data.trim() === "ping") return;
             try {
