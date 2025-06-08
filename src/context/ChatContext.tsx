@@ -122,37 +122,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.messageListener]);
 
-  // Auto-save user data to localStorage
-  useEffect(() => {
-    if (state.userId && state.userKey) {
-      localStorage.setItem(
-        "chatUserData",
-        JSON.stringify({
-          userId: state.userId,
-          userKey: state.userKey,
-        })
-      );
-    }
-  }, [state.userId, state.userKey]);
 
-  // Load user data from localStorage on mount
-  useEffect(() => {
-    const savedUserData = localStorage.getItem("chatUserData");
-    if (savedUserData) {
-      try {
-        const { userId, userKey } = JSON.parse(savedUserData);
-        if (userId && userKey) {
-          dispatch({
-            type: "SET_USER_DATA",
-            payload: { userId, userKey },
-          });
-        }
-      } catch (error) {
-        console.error("Error loading saved user data:", error);
-        localStorage.removeItem("chatUserData");
-      }
-    }
-  }, []);
   const actions = {
     sendMessage: async (content: string) => {
       try {
