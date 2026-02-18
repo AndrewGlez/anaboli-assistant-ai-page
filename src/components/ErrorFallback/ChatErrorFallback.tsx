@@ -1,7 +1,6 @@
 import type { FallbackProps } from 'react-error-boundary';
 
 export function ChatErrorFallback({ resetErrorBoundary }: FallbackProps) {
-
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
       <p className="text-red-400 mb-4">Error en el chat</p>

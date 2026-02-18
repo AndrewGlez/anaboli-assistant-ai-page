@@ -3,14 +3,14 @@ export function Tips() {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
       {[
         {
-          icon: "💬",
-          title: " Pregúntanos lo que quieras",
-          desc: "Resolvemos tus dudas sobre nuestras avenas: variedades, usos y beneficios.",
+          icon: '💬',
+          title: ' Pregúntanos lo que quieras',
+          desc: 'Resolvemos tus dudas sobre nuestras avenas: variedades, usos y beneficios.',
         },
         {
-          icon: "🧋",
-          title: "Todo sobre nuestros productos",
-          desc: "Conoce los ingredientes, formas de consumo y qué hace especial a cada tipo de avena.",
+          icon: '🧋',
+          title: 'Todo sobre nuestros productos',
+          desc: 'Conoce los ingredientes, formas de consumo y qué hace especial a cada tipo de avena.',
         },
       ].map((item, index) => (
         <div

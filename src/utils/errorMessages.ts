@@ -3,7 +3,8 @@ import { config } from '../config';
 export const ERROR_MESSAGES = {
   MESSAGE_LIMIT_REACHED: `Has alcanzado el limite de ${config.MESSAGE_LIMIT} mensajes. Por favor, reinicia la conversacion para continuar.`,
   RESPONSE_ERROR: 'Error al recibir la respuesta. Por favor, intentalo de nuevo.',
-  SEND_ERROR: 'Lo siento, ha ocurrido un error al enviar tu mensaje. Por favor, intentalo de nuevo.',
+  SEND_ERROR:
+    'Lo siento, ha ocurrido un error al enviar tu mensaje. Por favor, intentalo de nuevo.',
   REGENERATE_ERROR: 'Error al regenerar la respuesta. Por favor, intentalo de nuevo.',
   SELECTION_ERROR: 'Error al procesar la seleccion. Por favor, intentalo de nuevo.',
   USER_KEY_ERROR: 'No se pudo obtener la clave de usuario',

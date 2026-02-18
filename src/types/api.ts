@@ -1,5 +1,5 @@
 export interface MessageAction {
-  action: "postback";
+  action: 'postback';
   label: string;
   value: string;
 }

@@ -1,27 +1,35 @@
-import { useEffect, useRef, useMemo, useCallback } from "react";
-import { MessageBubble } from "./MessageBubble";
-import { useChat } from "../context/ChatContext";
-import { AnaboliLogo } from "../assets";
-import { Tips } from "./Tips";
-import { Avatar } from "./Avatar";
+import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { MessageBubble } from './MessageBubble';
+import { useChat } from '../context/ChatContext';
+import { AnaboliLogo } from '../assets';
+import { Tips } from './Tips';
+import { Avatar } from './Avatar';
 
 export function ChatArea() {
   const { state } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const typingMessage = useMemo(() => state.isTyping
-    ? { id: 'typing', content: '', role: 'assistant' as const, timestamp: new Date(), isTyping: true }
-    : null,
+  const typingMessage = useMemo(
+    () =>
+      state.isTyping
+        ? {
+            id: 'typing',
+            content: '',
+            role: 'assistant' as const,
+            timestamp: new Date(),
+            isTyping: true,
+          }
+        : null,
     [state.isTyping]
   );
 
-  const allMessages = useMemo(() => [
-    ...state.messages,
-    ...(typingMessage ? [typingMessage] : []),
-  ], [state.messages, typingMessage]);
+  const allMessages = useMemo(
+    () => [...state.messages, ...(typingMessage ? [typingMessage] : [])],
+    [state.messages, typingMessage]
+  );
 
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
   useEffect(() => {
@@ -30,7 +38,7 @@ export function ChatArea() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-anaboli-primary">
-      {" "}
+      {' '}
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-anaboli-secondary">
         <div className="flex items-center space-x-2">
@@ -43,9 +51,7 @@ export function ChatArea() {
               />
             </span>
           </div>
-          <span className="text-anaboli-text-primary font-medium">
-            Asistente Anaboli
-          </span>
+          <span className="text-anaboli-text-primary font-medium">Asistente Anaboli</span>
         </div>
         {/* <div className="flex items-center space-x-2">
           <span className="text-anaboli-text-primary font-medium">Share</span>
@@ -60,9 +66,7 @@ export function ChatArea() {
               <Avatar />
             </div>
             {/* Title */}
-            <h1 className="text-3xl font-bold text-anaboli-text-primary mb-8">
-              Asistente Anaboli
-            </h1>
+            <h1 className="text-3xl font-bold text-anaboli-text-primary mb-8">Asistente Anaboli</h1>
             {/* Tips */}
             <Tips />
           </div>

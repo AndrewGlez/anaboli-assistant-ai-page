@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useId } from "react";
-import { useChat } from "../context/ChatContext";
+import React, { useState, useRef, useEffect, useId } from 'react';
+import { useChat } from '../context/ChatContext';
 
 export function ChatInput() {
   const { state, sendMessage, clearChat } = useChat();
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const textareaId = useId();
   const hintId = useId();
@@ -12,7 +12,7 @@ export function ChatInput() {
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = "auto";
+      textarea.style.height = 'auto';
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
   }, [message]);
@@ -20,12 +20,12 @@ export function ChatInput() {
     e.preventDefault();
     if (message.trim() && !state.isTyping && !state.isLimitReached) {
       sendMessage(message.trim());
-      setMessage("");
+      setMessage('');
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -33,21 +33,21 @@ export function ChatInput() {
   return (
     <div className="p-6">
       <div className="max-w-2xl mx-auto">
-        {" "}
+        {' '}
         {/* Message Counter */}
         {state.messageCount > 0 && (
           <div className="mb-3 text-center">
             <span
               className={`text-sm px-3 py-1 rounded-full ${
                 state.isLimitReached
-                  ? "bg-red-900/30 text-red-400 border border-red-500/30"
+                  ? 'bg-red-900/30 text-red-400 border border-red-500/30'
                   : state.messageCount >= 8
-                  ? "bg-yellow-900/30 text-yellow-400 border border-yellow-500/30"
-                  : "bg-anaboli-secondary text-anaboli-text-secondary border border-anaboli-accent"
+                    ? 'bg-yellow-900/30 text-yellow-400 border border-yellow-500/30'
+                    : 'bg-anaboli-secondary text-anaboli-text-secondary border border-anaboli-accent'
               }`}
             >
               {state.isLimitReached
-                ? "Límite alcanzado"
+                ? 'Límite alcanzado'
                 : `${state.messageCount}/${state.messageLimit} mensajes`}
             </span>
           </div>
@@ -77,35 +77,30 @@ export function ChatInput() {
               aria-describedby={hintId}
               placeholder={
                 state.isLimitReached
-                  ? "Has alcanzado el límite de mensajes"
+                  ? 'Has alcanzado el límite de mensajes'
                   : state.isTyping
-                  ? "El asistente está pensando..."
-                  : "Pregunta acerca de nuestros productos..."
+                    ? 'El asistente está pensando...'
+                    : 'Pregunta acerca de nuestros productos...'
               }
               disabled={state.isTyping || state.isLimitReached}
               className="w-full bg-anaboli-secondary border border-anaboli-accent rounded-full overflow-hidden px-6 py-4 text-anaboli-text-primary placeholder-anaboli-text-secondary resize-none focus:outline-none focus:border-anaboli-accent min-h-[56px] max-h-[120px] pr-16 placeholder:text-sm sm:placeholder:text-base"
               rows={1}
             />
             <span id={hintId} className="sr-only">
-              {state.isTyping ? 'El asistente está pensando...' : 'Pregunta acerca de nuestros productos'}
+              {state.isTyping
+                ? 'El asistente está pensando...'
+                : 'Pregunta acerca de nuestros productos'}
             </span>
             <button
               type="submit"
-              disabled={
-                !message.trim() || state.isTyping || state.isLimitReached
-              }
+              disabled={!message.trim() || state.isTyping || state.isLimitReached}
               className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-lg transition-all ${
                 message.trim() && !state.isTyping && !state.isLimitReached
-                  ? "bg-anaboli-base text-text-base hover:bg-anaboli-text-secondary"
-                  : "bg-anaboli-accent text-anaboli-text-secondary cursor-not-allowed"
+                  ? 'bg-anaboli-base text-text-base hover:bg-anaboli-text-secondary'
+                  : 'bg-anaboli-accent text-anaboli-text-secondary cursor-not-allowed'
               }`}
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

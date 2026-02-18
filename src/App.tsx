@@ -1,7 +1,7 @@
 import { ErrorBoundary } from 'react-error-boundary';
-import { ChatProvider } from "./context/ChatContext";
-import { ChatArea } from "./components/ChatArea";
-import { ChatInput } from "./components/ChatInput";
+import { ChatProvider } from './context/ChatContext';
+import { ChatArea } from './components/ChatArea';
+import { ChatInput } from './components/ChatInput';
 import { ChatErrorFallback } from './components/ErrorFallback/ChatErrorFallback';
 
 function App() {

@@ -1,13 +1,13 @@
 import type { MessageAction, MessageOption } from './api';
 
 export interface MessageChoice {
-  type: "choice";
+  type: 'choice';
   text: string;
   options: MessageOption[];
 }
 
 export interface MessageCard {
-  type: "card";
+  type: 'card';
   title: string;
   subtitle?: string;
   actions: MessageAction[];
@@ -16,7 +16,7 @@ export interface MessageCard {
 export interface Message {
   id: string;
   content: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   timestamp: Date;
   isTyping?: boolean;
   card?: MessageCard;
@@ -32,8 +32,8 @@ export interface Conversation {
 }
 
 export interface ChatSettings {
-  theme: "light" | "dark" | "system";
-  fontSize: "small" | "medium" | "large";
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
   soundEnabled: boolean;
   autoSave: boolean;
 }
