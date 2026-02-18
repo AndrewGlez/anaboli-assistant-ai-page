@@ -1,18 +1,9 @@
-export interface MessageOption {
-  label: string;
-  value: string;
-}
+import type { MessageAction, MessageOption } from './api';
 
 export interface MessageChoice {
   type: "choice";
   text: string;
   options: MessageOption[];
-}
-
-export interface MessageAction {
-  action: "postback";
-  label: string;
-  value: string;
 }
 
 export interface MessageCard {

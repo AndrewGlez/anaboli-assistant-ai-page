@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
-import type { Message } from "../types/chat";
+import React, { useContext, useReducer, useEffect, useMemo } from "react";
+import { ChatStateContext } from './ChatStateContext';
+import { ChatDispatchContext } from './ChatDispatchContext';
+import { chatReducer, initialState } from './chatReducer';
 import {
   createUser,
   createConversation,
@@ -7,154 +9,13 @@ import {
   generateUserId,
   listenToMessages,
   getLastMessage,
-  type MessageData,
-} from "../types/api";
-
-interface ChatState {
-  messages: Message[];
-  isTyping: boolean;
-  userId: string | null;
-  conversationId: string | null;
-  userKey: string | null;
-  messageListener: (() => void) | null;
-  messageCount: number;
-  messageLimit: number;
-  isLimitReached: boolean;
-  sseTimeoutId: number | null;
-}
-
-type ChatAction =
-  | { type: "ADD_MESSAGE"; payload: Message }
-  | {
-      type: "UPDATE_MESSAGE";
-      payload: { messageId: string; updates: Partial<Message> };
-    }
-  | { type: "REMOVE_MESSAGE"; payload: string }
-  | { type: "SET_TYPING"; payload: boolean }
-  | { type: "SET_USER_DATA"; payload: { userId: string; userKey: string } }
-  | { type: "SET_CONVERSATION_ID"; payload: string }
-  | { type: "SET_MESSAGE_LISTENER"; payload: (() => void) | null }
-  | { type: "INCREMENT_MESSAGE_COUNT" }
-  | { type: "RESET_MESSAGE_COUNT" }
-  | { type: "SET_SSE_TIMEOUT"; payload: number | null }
-  | { type: "CLEAR_SSE_TIMEOUT" }
-  | { type: "RESET_CHAT" };
-
-const initialState: ChatState = {
-  messages: [],
-  isTyping: false,
-  userId: null,
-  conversationId: null,
-  userKey: null,
-  messageListener: null,
-  messageCount: 0,
-  messageLimit: 10,
-  isLimitReached: false,
-  sseTimeoutId: null,
-};
-
-function chatReducer(state: ChatState, action: ChatAction): ChatState {
-  switch (action.type) {
-    case "ADD_MESSAGE":
-      return {
-        ...state,
-        messages: [...state.messages, action.payload],
-      };
-
-    case "UPDATE_MESSAGE":
-      return {
-        ...state,
-        messages: state.messages.map((msg) =>
-          msg.id === action.payload.messageId
-            ? { ...msg, ...action.payload.updates }
-            : msg
-        ),
-      };
-
-    case "REMOVE_MESSAGE":
-      return {
-        ...state,
-        messages: state.messages.filter((msg) => msg.id !== action.payload),
-      };
-
-    case "SET_TYPING":
-      return { ...state, isTyping: action.payload };
-
-    case "SET_USER_DATA":
-      return {
-        ...state,
-        userId: action.payload.userId,
-        userKey: action.payload.userKey,
-      };
-
-    case "SET_CONVERSATION_ID":
-      return {
-        ...state,
-        conversationId: action.payload,
-      };
-
-    case "SET_MESSAGE_LISTENER":
-      return {
-        ...state,
-        messageListener: action.payload,
-      };
-    case "INCREMENT_MESSAGE_COUNT": {
-      const newCount = state.messageCount + 1;
-      return {
-        ...state,
-        messageCount: newCount,
-        isLimitReached: newCount >= state.messageLimit,
-      };
-    }
-
-    case "RESET_MESSAGE_COUNT":
-      return {
-        ...state,
-        messageCount: 0,
-        isLimitReached: false,
-      };
-    case "RESET_CHAT":
-      return {
-        ...initialState,
-        userId: state.userId,
-        userKey: state.userKey,
-      };
-
-    case "SET_SSE_TIMEOUT":
-      return {
-        ...state,
-        sseTimeoutId: action.payload,
-      };
-
-    case "CLEAR_SSE_TIMEOUT":
-      if (state.sseTimeoutId) {
-        clearTimeout(state.sseTimeoutId);
-      }
-      return {
-        ...state,
-        sseTimeoutId: null,
-      };
-
-    default:
-      return state;
-  }
-}
-
-interface ChatContextType {
-  state: ChatState;
-  actions: {
-    sendMessage: (content: string) => Promise<void>;
-    regenerateMessage: (messageId: string) => Promise<void>;
-    clearChat: () => void;
-    removeMessage: (messageId: string) => void;
-    handleButtonClick: (buttonValue: string) => Promise<void>;
-  };
-}
-
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+} from "../services/api";
+import type { Message, MessageData } from "../types";
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(chatReducer, initialState); // Cleanup message listener on unmount and when listener changes
+  const [state, dispatch] = useReducer(chatReducer, initialState);
+
+  // Cleanup message listener on unmount and when listener changes
   useEffect(() => {
     const cleanup = state.messageListener;
     return () => {
@@ -164,7 +25,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.messageListener]);
 
-  const actions = {
+  const actions = useMemo(() => ({
     sendMessage: async (content: string) => {
       // Check if message limit is reached
       if (state.isLimitReached) {
@@ -193,7 +54,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
         let currentUserId = state.userId;
         let currentConversationId = state.conversationId;
-        let currentUserKey = state.userKey; // Initialize user and conversation if not already done
+        let currentUserKey = state.userKey;
+        // Initialize user and conversation if not already done
         if (!currentUserId || !currentConversationId || !currentUserKey) {
           // Generate user ID
           currentUserId = generateUserId();
@@ -227,7 +89,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           dispatch({
             type: "SET_CONVERSATION_ID",
             payload: currentConversationId,
-          }); // Start listening for messages
+          });
+          // Start listening for messages
           const cleanup = listenToMessages(
             currentUserKey,
             currentConversationId,
@@ -250,7 +113,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   content: messageContent || "",
                   role: "assistant",
                   timestamp: new Date(),
-                }; // Add card data if it exists
+                };
+                // Add card data if it exists
                 if (payload?.type === "card") {
                   aiMessage.card = {
                     type: "card",
@@ -291,7 +155,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
           // Store the cleanup function
           dispatch({ type: "SET_MESSAGE_LISTENER", payload: cleanup });
-        } // Ensure we have valid values before sending message
+        }
+        // Ensure we have valid values before sending message
         if (currentUserKey && currentConversationId) {
           // Clear any existing timeout
           dispatch({ type: "CLEAR_SSE_TIMEOUT" });
@@ -316,7 +181,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   content: messageContent || "",
                   role: "assistant",
                   timestamp: new Date(),
-                }; // Add card data if it exists
+                };
+                // Add card data if it exists
                 if (payload?.type === "card") {
                   aiMessage.card = {
                     type: "card",
@@ -454,7 +320,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
               const updates: Partial<Message> = {
                 content: messageContent || "",
                 timestamp: new Date(),
-              }; // Add card data if it exists
+              };
+              // Add card data if it exists
               if (payload?.type === "card") {
                 updates.card = {
                   type: "card",
@@ -589,7 +456,8 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
                   content: messageContent || "",
                   role: "assistant",
                   timestamp: new Date(),
-                }; // Add card data if it exists
+                };
+                // Add card data if it exists
                 if (payload?.type === "card") {
                   aiMessage.card = {
                     type: "card",
@@ -649,19 +517,35 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-  };
+  }), [state]);
+
+  const dispatchValue = useMemo(() => ({
+    sendMessage: actions.sendMessage,
+    regenerateMessage: actions.regenerateMessage,
+    clearChat: actions.clearChat,
+    removeMessage: actions.removeMessage,
+    handleButtonClick: actions.handleButtonClick,
+  }), [actions]);
 
   return (
-    <ChatContext.Provider value={{ state, actions }}>
-      {children}
-    </ChatContext.Provider>
+    <ChatStateContext.Provider value={{ state }}>
+      <ChatDispatchContext.Provider value={dispatchValue}>
+        {children}
+      </ChatDispatchContext.Provider>
+    </ChatStateContext.Provider>
   );
 }
 
 export function useChat() {
-  const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error("useChat must be used within a ChatProvider");
+  const stateContext = useContext(ChatStateContext);
+  const dispatchContext = useContext(ChatDispatchContext);
+
+  if (!stateContext || !dispatchContext) {
+    throw new Error('useChat must be used within ChatProvider');
   }
-  return context;
+
+  return {
+    state: stateContext.state,
+    ...dispatchContext,
+  };
 }

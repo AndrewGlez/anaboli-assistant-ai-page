@@ -1,27 +1,32 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Copy, RotateCcw, User, Check } from "lucide-react";
 import type { Message } from "../types/chat";
 import { useChat } from "../context/ChatContext";
 import { Avatar } from "./Avatar";
 import DOMPurify from "dompurify";
-import { marked } from "marked";
+
+const markedPromise = import('marked');
+
+function MarkdownContent({ content }: { content: string }) {
+  const [parsed, setParsed] = useState('');
+
+  useEffect(() => {
+    markedPromise.then(({ marked }) => {
+      const result = marked.parseInline(content);
+      setParsed(DOMPurify.sanitize(result as string));
+    });
+  }, [content]);
+
+  return <span dangerouslySetInnerHTML={{ __html: parsed }} />;
+}
 
 interface MessageBubbleProps {
   message: Message;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
-  const { actions } = useChat();
+export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
+  const { regenerateMessage, handleButtonClick } = useChat();
   const [copied, setCopied] = useState(false);
-  const [parsedContent, setParsedContent] = useState<string>("");
-
-  useEffect(() => {
-    const parseContent = async () => {
-      const parsed = await marked.parseInline(message.content);
-      setParsedContent(DOMPurify.sanitize(parsed));
-    };
-    parseContent();
-  }, [message.content]);
 
   const copyToClipboard = async () => {
     try {
@@ -63,6 +68,8 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       >
         {" "}
         <div
+          role={isUser ? "status" : "article"}
+          aria-label={isUser ? "Tu mensaje" : "Mensaje del asistente"}
           className={`relative p-4 rounded-2xl ${
             isUser
               ? "bg-text-accent text-anaboli-text-primary rounded-br-md"
@@ -94,12 +101,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             <>
               {" "}
               <div className="prose prose-sm max-w-none">
-                <p
-                  dangerouslySetInnerHTML={{
-                    __html: parsedContent,
-                  }}
-                  className="text-anaboli-text-primary whitespace-pre-wrap leading-relaxed m-0"
-                ></p>
+                <p className="text-anaboli-text-primary whitespace-pre-wrap leading-relaxed m-0">
+                  <MarkdownContent content={message.content} />
+                </p>
               </div>
               {/* Choice with options */}
               {message.choice && (
@@ -108,7 +112,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     {message.choice.options.map((option, index) => (
                       <button
                         key={index}
-                        onClick={() => actions.handleButtonClick(option.value)}
+                        onClick={() => handleButtonClick(option.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleButtonClick(option.value);
+                          }
+                        }}
                         className="px-3 py-2 text-sm bg-anaboli-primary text-white rounded-md hover:bg-neutral-800 transition-colors text-left"
                       >
                         {option.label}
@@ -132,7 +142,13 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                     {message.card.actions.map((action, index) => (
                       <button
                         key={index}
-                        onClick={() => actions.handleButtonClick(action.label)}
+                        onClick={() => handleButtonClick(action.label)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleButtonClick(action.label);
+                          }
+                        }}
                         className="px-3 py-2 text-sm bg-anaboli-primary text-white rounded-md hover:bg-opacity-90 transition-colors text-left"
                       >
                         {action.label}
@@ -161,7 +177,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
                 </button>
                 {!isUser && (
                   <button
-                    onClick={() => actions.regenerateMessage(message.id)}
+                    onClick={() => regenerateMessage(message.id)}
                     className="p-1 text-anaboli-text-secondary hover:text-anaboli-text-primary rounded transition-colors"
                     title="Regenerar respuesta"
                   >
@@ -186,4 +202,4 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useId } from "react";
 import { useChat } from "../context/ChatContext";
 
 export function ChatInput() {
-  const { state, actions } = useChat();
+  const { state, sendMessage, clearChat } = useChat();
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaId = useId();
+  const hintId = useId();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -17,7 +19,7 @@ export function ChatInput() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() && !state.isTyping && !state.isLimitReached) {
-      actions.sendMessage(message.trim());
+      sendMessage(message.trim());
       setMessage("");
     }
   };
@@ -54,7 +56,7 @@ export function ChatInput() {
         {state.isLimitReached && (
           <div className="mb-3 text-center">
             <button
-              onClick={actions.clearChat}
+              onClick={clearChat}
               className="bg-text-accent text-white px-4 py-2 rounded-lg hover:bg-text-accent/80 transition-colors text-sm"
             >
               Reiniciar conversación
@@ -63,12 +65,16 @@ export function ChatInput() {
         )}
         <form onSubmit={handleSubmit}>
           <div className="relative">
-            {" "}
+            <label htmlFor={textareaId} className="sr-only">
+              Escribir mensaje
+            </label>
             <textarea
+              id={textareaId}
               ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
+              aria-describedby={hintId}
               placeholder={
                 state.isLimitReached
                   ? "Has alcanzado el límite de mensajes"
@@ -79,7 +85,10 @@ export function ChatInput() {
               disabled={state.isTyping || state.isLimitReached}
               className="w-full bg-anaboli-secondary border border-anaboli-accent rounded-full overflow-hidden px-6 py-4 text-anaboli-text-primary placeholder-anaboli-text-secondary resize-none focus:outline-none focus:border-anaboli-accent min-h-[56px] max-h-[120px] pr-16 placeholder:text-sm sm:placeholder:text-base"
               rows={1}
-            />{" "}
+            />
+            <span id={hintId} className="sr-only">
+              {state.isTyping ? 'El asistente está pensando...' : 'Pregunta acerca de nuestros productos'}
+            </span>
             <button
               type="submit"
               disabled={

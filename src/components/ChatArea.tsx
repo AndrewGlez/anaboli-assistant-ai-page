@@ -1,7 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo, useCallback } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { useChat } from "../context/ChatContext";
-import type { Message } from "../types/chat";
 import { AnaboliLogo } from "../assets";
 import { Tips } from "./Tips";
 import { Avatar } from "./Avatar";
@@ -10,26 +9,24 @@ export function ChatArea() {
   const { state } = useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [state.messages, state.isTyping]);
+  const typingMessage = useMemo(() => state.isTyping
+    ? { id: 'typing', content: '', role: 'assistant' as const, timestamp: new Date(), isTyping: true }
+    : null,
+    [state.isTyping]
+  );
 
-  // Create typing indicator message
-  const typingMessage: Message | null = state.isTyping
-    ? {
-        id: "typing",
-        content: "",
-        role: "assistant",
-        timestamp: new Date(),
-        isTyping: true,
-      }
-    : null;
-
-  const allMessages = [
+  const allMessages = useMemo(() => [
     ...state.messages,
     ...(typingMessage ? [typingMessage] : []),
-  ];
+  ], [state.messages, typingMessage]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [allMessages, scrollToBottom]);
 
   return (
     <div className="flex-1 overflow-y-auto bg-anaboli-primary">
