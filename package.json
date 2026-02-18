@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
@@ -41,8 +42,12 @@
     "vite": "^6.3.5"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint"
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,json,md}": [
+      "prettier --write"
     ]
   },
   "trustedDependencies": [
