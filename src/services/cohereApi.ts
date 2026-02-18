@@ -16,7 +16,7 @@ const cohere = new CohereClientV2({
 export async function sendMessageToCohere(message: string): Promise<CohereResponse> {
   try {
     const response = await cohere.chat({
-      model: 'command-r',
+      model: 'command-a-03-2025',
       messages: [
         {
           role: 'system',
@@ -66,7 +66,7 @@ export async function sendMessageToCohere(message: string): Promise<CohereRespon
 export async function* streamMessageToCohere(message: string): AsyncGenerator<string> {
   try {
     const stream = await cohere.chatStream({
-      model: 'command-r',
+      model: 'command-a-03-2025',
       messages: [
         {
           role: 'system',
