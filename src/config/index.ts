@@ -9,6 +9,7 @@ export const config = {
     CONVERSATIONS: '/conversations',
     MESSAGES: '/messages',
   } as const,
+  COHERE_API_KEY: import.meta.env.VITE_COHERE_API_KEY || '',
 };
 
 export type Config = typeof config;

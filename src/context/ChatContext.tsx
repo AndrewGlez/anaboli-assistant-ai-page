@@ -2,15 +2,8 @@ import React, { useContext, useReducer, useEffect, useMemo } from 'react';
 import { ChatStateContext } from './ChatStateContext';
 import { ChatDispatchContext } from './ChatDispatchContext';
 import { chatReducer, initialState } from './chatReducer';
-import {
-  createUser,
-  createConversation,
-  sendMessage as sendApiMessage,
-  generateUserId,
-  listenToMessages,
-  getLastMessage,
-} from '../services/api';
-import type { Message, MessageData } from '../types';
+import { sendMessageToCohere } from '../services/cohereApi';
+import type { Message } from '../types';
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(chatReducer, initialState);
@@ -53,181 +46,18 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'INCREMENT_MESSAGE_COUNT' });
           dispatch({ type: 'SET_TYPING', payload: true });
 
-          let currentUserId = state.userId;
-          let currentConversationId = state.conversationId;
-          let currentUserKey = state.userKey;
-          // Initialize user and conversation if not already done
-          if (!currentUserId || !currentConversationId || !currentUserKey) {
-            // Generate user ID
-            currentUserId = generateUserId();
+          // Send message to Cohere API
+          const response = await sendMessageToCohere(content);
 
-            // Create user and get the returned key
-            const userResponse = await createUser(currentUserId, 'Usuario Anaboli');
-            currentUserKey = userResponse.key || userResponse.id || currentUserId;
-
-            // Validate user key exists
-            if (!currentUserKey) {
-              throw new Error('No se pudo obtener la clave de usuario');
-            }
-
-            // Set user data
-            dispatch({
-              type: 'SET_USER_DATA',
-              payload: { userId: currentUserId, userKey: currentUserKey },
-            });
-
-            // Generate conversation ID
-            currentConversationId = 'conv_' + Math.random().toString(36).substr(2, 9);
-
-            // Create conversation
-            await createConversation(currentUserKey, currentConversationId);
-
-            // Set conversation ID
-            dispatch({
-              type: 'SET_CONVERSATION_ID',
-              payload: currentConversationId,
-            });
-            // Start listening for messages
-            const cleanup = listenToMessages(
-              currentUserKey,
-              currentConversationId,
-              (messageData: MessageData) => {
-                // Handle incoming message from the bot
-                const messageContent = messageData.data?.payload?.text || messageData.payload?.text;
-                const messageId = messageData.data?.id || messageData.id || Date.now().toString();
-                const isBot = messageData.data?.isBot;
-                const payload = messageData.data?.payload || messageData.payload;
-
-                // Only show message if it's from the bot
-                if (isBot === true) {
-                  // Clear the timeout since we received a response via SSE
-                  dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-                  const aiMessage: Message = {
-                    id: messageId,
-                    content: messageContent || '',
-                    role: 'assistant',
-                    timestamp: new Date(),
-                  };
-                  // Add card data if it exists
-                  if (payload?.type === 'card') {
-                    aiMessage.card = {
-                      type: 'card',
-                      title: payload.title || '',
-                      subtitle: payload.subtitle,
-                      actions: payload.actions || [],
-                    };
-                  }
-
-                  // Add choice data if it exists
-                  if (payload?.type === 'choice') {
-                    aiMessage.choice = {
-                      type: 'choice',
-                      text: payload.text || '',
-                      options: payload.options || [],
-                    };
-                  }
-
-                  dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
-                  dispatch({ type: 'SET_TYPING', payload: false });
-                }
-              },
-              (error: Error) => {
-                console.error('Error in message listener:', error);
-                dispatch({ type: 'SET_TYPING', payload: false });
-                dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-                const errorMessage: Message = {
-                  id: Date.now().toString(),
-                  content: 'Error al recibir la respuesta. Por favor, inténtalo de nuevo.',
-                  role: 'assistant',
-                  timestamp: new Date(),
-                };
-                dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
-              }
-            );
-
-            // Store the cleanup function
-            dispatch({ type: 'SET_MESSAGE_LISTENER', payload: cleanup });
-          }
-          // Ensure we have valid values before sending message
-          if (currentUserKey && currentConversationId) {
-            // Clear any existing timeout
-            dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-            // Send the actual message through the API
-            await sendApiMessage(currentUserKey, currentConversationId, content);
-
-            // Set up a timeout for SSE response
-            const sseTimeoutId = window.setTimeout(async () => {
-              // console.log("SSE timeout reached, falling back to API");
-              try {
-                const lastMessage = await getLastMessage(currentConversationId!, currentUserKey!);
-                if (lastMessage) {
-                  const messageContent = lastMessage?.payload?.text;
-                  const messageId = lastMessage?.id;
-                  const payload = lastMessage?.payload;
-                  const aiMessage: Message = {
-                    id: messageId || Date.now().toString(),
-                    content: messageContent || '',
-                    role: 'assistant',
-                    timestamp: new Date(),
-                  };
-                  // Add card data if it exists
-                  if (payload?.type === 'card') {
-                    aiMessage.card = {
-                      type: 'card',
-                      title: payload.title || '',
-                      subtitle: payload.subtitle,
-                      actions: payload.actions || [],
-                    };
-                  }
-
-                  // Add choice data if it exists
-                  if (payload?.type === 'choice') {
-                    aiMessage.choice = {
-                      type: 'choice',
-                      text: payload.text || '',
-                      options: payload.options || [],
-                    };
-                  }
-
-                  dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
-                  dispatch({ type: 'SET_TYPING', payload: false });
-                  dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-                }
-              } catch (fallbackError) {
-                console.error('Fallback API call failed:', fallbackError);
-                dispatch({ type: 'SET_TYPING', payload: false });
-                dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-                const errorMessage: Message = {
-                  id: Date.now().toString(),
-                  content: 'Error al recibir la respuesta. Por favor, inténtalo de nuevo.',
-                  role: 'assistant',
-                  timestamp: new Date(),
-                };
-                dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
-              }
-            }, 10000); // 10 second timeout
-
-            // Store the timeout ID
-            dispatch({ type: 'SET_SSE_TIMEOUT', payload: sseTimeoutId });
-
-            // Clear timeout if SSE responds before timeout
-            const originalCleanup = state.messageListener;
-            if (originalCleanup) {
-              dispatch({
-                type: 'SET_MESSAGE_LISTENER',
-                payload: () => {
-                  clearTimeout(sseTimeoutId);
-                  originalCleanup();
-                },
-              });
-            }
-          } else {
-            throw new Error('Usuario o conversación no inicializados correctamente');
-          }
+          // Add assistant response
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            content: response.text,
+            role: 'assistant',
+            timestamp: new Date(),
+          };
+          dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
+          dispatch({ type: 'SET_TYPING', payload: false });
         } catch (error) {
           console.error('Error in sendMessage:', error);
           dispatch({ type: 'SET_TYPING', payload: false });
@@ -251,22 +81,19 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         const messageIndex = state.messages.findIndex((m) => m.id === messageId);
         const userMessageIndex = messageIndex - 1;
 
-        if (userMessageIndex < 0 || state.messages[userMessageIndex].role !== 'user') {
+        if (
+          userMessageIndex < 0 ||
+          !state.messages[userMessageIndex] ||
+          state.messages[userMessageIndex].role !== 'user'
+        ) {
           console.error('No user message found before assistant message');
           return;
         }
 
         const userMessage = state.messages[userMessageIndex];
 
-        if (!state.userKey || !state.conversationId) {
-          console.error('User key or conversation ID not available');
-          return;
-        }
-
         try {
           dispatch({ type: 'SET_TYPING', payload: true });
-          // Clear any existing timeout
-          dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
 
           // Remove the old assistant message
           dispatch({
@@ -281,76 +108,25 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
           });
 
           // Send the user message again to regenerate the response
-          await sendApiMessage(state.userKey, state.conversationId, userMessage.content);
+          const response = await sendMessageToCohere(userMessage.content);
 
-          // Set up timeout for regeneration response
-          const sseTimeoutId = window.setTimeout(async () => {
-            // console.log(
-            //   "SSE timeout reached for regeneration, falling back to API"
-            // );
-            try {
-              const lastMessage = await getLastMessage(state.conversationId!, state.userKey!);
-              if (lastMessage) {
-                const messageContent = lastMessage.data?.payload?.text || lastMessage.payload?.text;
-                const payload = lastMessage.data?.payload || lastMessage.payload;
+          // Update the assistant message with the new response
+          const updates: Partial<Message> = {
+            content: response.text,
+            timestamp: new Date(),
+          };
 
-                const updates: Partial<Message> = {
-                  content: messageContent || '',
-                  timestamp: new Date(),
-                };
-                // Add card data if it exists
-                if (payload?.type === 'card') {
-                  updates.card = {
-                    type: 'card',
-                    title: payload.title || '',
-                    subtitle: payload.subtitle,
-                    actions: payload.actions || [],
-                  };
-                }
-
-                // Add choice data if it exists
-                if (payload?.type === 'choice') {
-                  updates.choice = {
-                    type: 'choice',
-                    text: payload.text || '',
-                    options: payload.options || [],
-                  };
-                }
-
-                dispatch({
-                  type: 'UPDATE_MESSAGE',
-                  payload: {
-                    messageId,
-                    updates,
-                  },
-                });
-                dispatch({ type: 'SET_TYPING', payload: false });
-                dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-              }
-            } catch (fallbackError) {
-              console.error('Fallback API call failed for regeneration:', fallbackError);
-              dispatch({ type: 'SET_TYPING', payload: false });
-              dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-              dispatch({
-                type: 'UPDATE_MESSAGE',
-                payload: {
-                  messageId,
-                  updates: {
-                    content: 'Error al regenerar la respuesta. Por favor, inténtalo de nuevo.',
-                    timestamp: new Date(),
-                  },
-                },
-              });
-            }
-          }, 10000); // 10 second timeout
-
-          // Store the timeout ID
-          dispatch({ type: 'SET_SSE_TIMEOUT', payload: sseTimeoutId });
+          dispatch({
+            type: 'UPDATE_MESSAGE',
+            payload: {
+              messageId,
+              updates,
+            },
+          });
+          dispatch({ type: 'SET_TYPING', payload: false });
         } catch (error) {
           console.error('Error regenerating message:', error);
           dispatch({ type: 'SET_TYPING', payload: false });
-          dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
 
           // Restore original message or show error
           dispatch({
@@ -391,84 +167,31 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'INCREMENT_MESSAGE_COUNT' });
 
         // Send the button value through the existing sendMessage logic
-        if (state.userKey && state.conversationId) {
-          try {
-            dispatch({ type: 'SET_TYPING', payload: true });
-            // Clear any existing timeout
-            dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
+        try {
+          dispatch({ type: 'SET_TYPING', payload: true });
 
-            await sendApiMessage(state.userKey, state.conversationId, buttonValue);
+          const response = await sendMessageToCohere(buttonValue);
 
-            // Set up timeout for button click response
-            const sseTimeoutId = window.setTimeout(async () => {
-              console.log('SSE timeout reached for button click, falling back to API');
-              try {
-                const lastMessage = await getLastMessage(state.conversationId!, state.userKey!);
-                if (lastMessage) {
-                  const messageContent =
-                    lastMessage.data?.payload?.text || lastMessage.payload?.text;
-                  const messageId = lastMessage.data?.id || lastMessage.id || Date.now().toString();
-                  const payload = lastMessage.data?.payload || lastMessage.payload;
+          // Add assistant response
+          const aiMessage: Message = {
+            id: Date.now().toString(),
+            content: response.text,
+            role: 'assistant',
+            timestamp: new Date(),
+          };
+          dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
+          dispatch({ type: 'SET_TYPING', payload: false });
+        } catch (error) {
+          console.error('Error handling button click:', error);
+          dispatch({ type: 'SET_TYPING', payload: false });
 
-                  const aiMessage: Message = {
-                    id: messageId,
-                    content: messageContent || '',
-                    role: 'assistant',
-                    timestamp: new Date(),
-                  };
-                  // Add card data if it exists
-                  if (payload?.type === 'card') {
-                    aiMessage.card = {
-                      type: 'card',
-                      title: payload.title || '',
-                      subtitle: payload.subtitle,
-                      actions: payload.actions || [],
-                    };
-                  }
-
-                  // Add choice data if it exists
-                  if (payload?.type === 'choice') {
-                    aiMessage.choice = {
-                      type: 'choice',
-                      text: payload.text || '',
-                      options: payload.options || [],
-                    };
-                  }
-
-                  dispatch({ type: 'ADD_MESSAGE', payload: aiMessage });
-                  dispatch({ type: 'SET_TYPING', payload: false });
-                  dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-                }
-              } catch (fallbackError) {
-                console.error('Fallback API call failed for button click:', fallbackError);
-                dispatch({ type: 'SET_TYPING', payload: false });
-                dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-                const errorMessage: Message = {
-                  id: Date.now().toString(),
-                  content: 'Error al procesar la selección. Por favor, inténtalo de nuevo.',
-                  role: 'assistant',
-                  timestamp: new Date(),
-                };
-                dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
-              }
-            }, 10000); // 10 second timeout
-
-            // Store the timeout ID
-            dispatch({ type: 'SET_SSE_TIMEOUT', payload: sseTimeoutId });
-          } catch (error) {
-            console.error('Error handling button click:', error);
-            dispatch({ type: 'SET_TYPING', payload: false });
-            dispatch({ type: 'CLEAR_SSE_TIMEOUT' });
-
-            const errorMessage: Message = {
-              id: (Date.now() + 1).toString(),
-              content: 'Error al procesar la selección. Por favor, inténtalo de nuevo.',
-              role: 'assistant',
-              timestamp: new Date(),
-            };
-            dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
-          }
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: 'Error al procesar la selección. Por favor, inténtalo de nuevo.',
+            role: 'assistant',
+            timestamp: new Date(),
+          };
+          dispatch({ type: 'ADD_MESSAGE', payload: errorMessage });
         }
       },
     }),

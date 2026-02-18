@@ -38,3 +38,17 @@ export interface MessageData {
   conversationId?: string;
   id?: string;
 }
+
+export interface CohereMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface CohereResponse {
+  text: string;
+}
+
+export interface CohereStreamResponse {
+  text: string;
+  isStreaming: boolean;
+}
