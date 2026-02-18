@@ -1,54 +1,94 @@
-# React + TypeScript + Vite
+<div align="center">
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Anaboli Assistant AI
 
-Currently, two official plugins are available:
+![React](https://img.shields.io/badge/React-19.1.0-blue?logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue?logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6.3.5-blue?logo=vite)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.1.8-%2306B6D4?logo=tailwindcss)
+![Node.js](https://img.shields.io/badge/Node.js-20.x-green?logo=node.js)
+![Axios](https://img.shields.io/badge/Axios-1.9.0-blue?logo=axios)
+![Dompurify](https://img.shields.io/badge/Dompurify-3.2.6-blue?logo=dompurify)
+![Marked](https://img.shields.io/badge/Marked-15.0.12-blue?logo=marked)
+![React--Error--Boundary](https://img.shields.io/badge/React--Error--Boundary-6.1.1-blue?logo=react)
+![Lucide](https://img.shields.io/badge/Lucide-0.513.0-blue?logo=lucide)
+![Husky](https://img.shields.io/badge/Husky-9.1.7-blue?logo=husky)
+![Vitest](https://img.shields.io/badge/Vitest-1.6.0-blue?logo=vitest)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+</div>
 
-## Expanding the ESLint configuration
+Anaboli Assistant es una aplicación de chat impulsada por IA construida con React, TypeScript y Vite. Proporciona una interfaz intuitiva para que los usuarios interactúen con un asistente de IA sobre productos y servicios.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Características
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
+- Interfaz de chat en tiempo real con indicadores de escritura
+- Seguimiento del límite de mensajes con indicadores visuales
+- Redimensionamiento automático del área de texto
+- Límites de error para un manejo robusto de errores
+- Diseño responsive con Tailwind CSS
+- SSE (Eventos enviados por el servidor) para respuestas en streaming
+
+## Capturas de pantalla
+
+### Interfaz principal de chat
+
+![Interfaz principal de chat](docs/screenshots/chat-interface.png)
+
+## Inicio rápido
+
+### Requisitos previos
+
+- Node.js 20.x o superior
+- npm o yarn
+
+### Instalación
+
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Desarrollo
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x';
-import reactDom from 'eslint-plugin-react-dom';
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-});
+```bash
+npm run dev
 ```
+
+### Construcción para producción
+
+```bash
+npm run build
+```
+
+### Ejecutar pruebas
+
+```bash
+npm run test
+```
+
+## Estructura del proyecto
+
+```
+src/
+├── components/          # Componentes React
+│   ├── ChatArea.tsx     # Interfaz principal de chat
+│   ├── ChatInput.tsx    # Componente de entrada de mensaje
+│   ├── MessageBubble.tsx # Visualización individual de mensaje
+│   └── ErrorFallback/   # Componentes de límite de error
+├── context/             # Proveedores de contexto React
+│   ├── ChatContext.tsx  # Contexto principal de chat
+│   ├── chatReducer.ts   # Reductor de estado de chat
+│   └── ChatDispatchContext.tsx # Contexto de despacho de chat
+├── services/            # Servicios API
+│   └── api.ts           # Cliente API para conexiones SSE
+├── utils/               # Funciones de utilidad
+│   ├── formatters.ts    # Utilidades de formato de mensaje
+│   └── errorMessages.ts # Constantes de mensajes de error
+├── assets/              # Activos estáticos
+│   ├── AnaboliLogo.jpg  # Logotipo de Anaboli
+│   └── Milkshake.png    # Activos adicionales
+└── App.tsx              # Componente principal de la aplicación
+```
+
+## Licencia
+
+MIT
