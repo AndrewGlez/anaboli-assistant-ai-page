@@ -33,6 +33,7 @@ Anaboli Assistant es una aplicación de chat impulsada por IA construida con Rea
 ### Interfaz principal de chat
 
 ![Interfaz principal de chat](docs/screenshots/chat-interface.png)
+![Prompt de ejemplo](docs/screenshots/chat-prompt.png)
 
 ## Inicio rápido
 
